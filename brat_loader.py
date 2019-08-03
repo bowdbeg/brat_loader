@@ -29,9 +29,6 @@ class Entity(BaseAnnData):
     def __str__(self):
         return self.entity
 
-    def __repr__(self):
-        return self.entity
-
     @property
     def start(self):
         return self._start
@@ -43,6 +40,10 @@ class Entity(BaseAnnData):
     @property
     def entity(self):
         return self._entity
+
+    @property
+    def label(self):
+        return self._label
 
 
 class Relation(BaseAnnData):
@@ -57,6 +58,9 @@ class Relation(BaseAnnData):
     def set_reference(self, arg1, arg2):
         self._arg1_ref = arg1
         self._arg2_ref = arg2
+
+    def __str__(self):
+        return self._label
 
     @property
     def arg1(self):
@@ -82,6 +86,8 @@ class TextData():
         with open(self._ann_file) as f:
             self._raw_ann = f.read()
 
+        self.parse_ann()
+
     def parse_ann(self):
         lines = self._raw_ann.strip().split('\n')
         syn_num = 1
@@ -99,11 +105,11 @@ class TextData():
                 entity = line_sp[2]
                 self._data[tag] = Entity(tag, label, start, end, entity)
             else:
-                assert tag in '*' or tag in 'R', 'tag oversight ({})'.format(
+                assert '*' in tag or 'R' in tag, 'tag oversight ({})'.format(
                     tag)
-                d = line_sp.split()
+                d = line_sp[1].split()
                 label = d[0]
-                if tag in '*':
+                if '*' in tag:
                     # tag assign uniquely
                     tag = 'S{}'.format(syn_num)
                     syn_num += 1
@@ -116,15 +122,15 @@ class TextData():
 
         # set reference to Relation instance
         for tag in self._data.keys():
-            if tag in 'R' or tag in '*':
+            if 'R' in tag or '*' in tag:
                 # relation
-                self._data[tag].set_reference(self._data[self._data[tag].arg1],
-                                              self._data[self._data[tag].arg2])
+                self._data[tag].set_reference(
+                    self._data[self._data[tag]._arg1],
+                    self._data[self._data[tag]._arg2])
             else:
                 # entity
                 pass
 
-    @property
     def tags(self):
         return self._data.keys()
 
@@ -132,10 +138,20 @@ class TextData():
     def text(self):
         return self._raw_text
 
-    @property
-    def data(self):
-        return self._data
+    def __str__(self):
+        return self.text
 
+    def __len__(self):
+        return len(self._data.keys())
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __delitem__(self, key):
+        del self._data[key]
+
+    def __contains__(self, p):
+        return p in self._data.keys()
 
 
 # dataset of texts (have list of TextData)
@@ -153,13 +169,11 @@ class TextDataset():
                 raise ValueError('File names have to be unique.')
             self._data[name] = dat
 
-    @property
     def keys(self):
-        return self._data.keys
+        return self._data.keys()
 
-    @property
-    def data(self):
-        return self._data
+    def tags(self, key):
+        return self._data[key].tags()
 
     def save(self, file):
         with open(file, 'wb') as f:
@@ -169,34 +183,17 @@ class TextDataset():
         with open(file, 'rb') as f:
             self._data = pkl.load(f)
 
+    def __len__(self):
+        return len(self._data.keys())
 
+    def __getitem__(self, key):
+        return self._data[key]
 
+    def __delitem__(self, key):
+        del self._data[key]
 
+    def __contains__(self, p):
+        return p in self._data.keys()
 
-
-
-
-if __name__ == "__main__":
-    # import argparse
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('mode', type=str)
-    # parser.add_argument(
-    #     '--sp_args',
-    #     type=str,
-    #     required=False,
-    #     default=
-    #     '--input=scienceie/train_data.txt,--model_prefix=sp_model,--vocab_size=32000,--character_converage=1.0,--model_type=unigram',
-    #     help='argument for sentencepiece training')
-
-    # args = parser.parse_args()
-    from glob import glob
-
-    files = glob('scienceie/test/*')
-    file_list = []
-    for file in files:
-        if '.txt' in file:
-            file_list.append((file, file[:-4] + '.ann'))
-    dataset = TextDataset()
-    dataset.read(file_list)
-    print(dataset.data)
-    dataset.save('test.dataset')
+    def __call__(self, file_list):
+        self.read(file_list)

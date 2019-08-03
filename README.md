@@ -1,3 +1,6 @@
 # brat_loader
 
-data loader for brat-type dataset
+"brat_loader" is data loader annotated by brat. 
+
+## Installation
+

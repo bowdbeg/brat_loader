@@ -1,6 +1,13 @@
+from .. import brat_loader
+import scispacy
+import spacy
+
+# TODO: scentencepiece
+
+
 class TextProcessor():
-    def __init__(self, spm_model_path, lower_case=True):
-        pass
+    def __init__(self, dataset):
+        self.dataset = dataset
 
     def __call__(self):
         self.process()
